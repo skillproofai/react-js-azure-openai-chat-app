@@ -8,10 +8,11 @@ const ChatApp = () => {
   const [inputText, setInputText] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [settingsData, setSettingsData] = useState({
-    apiUrl: 'Azure OpenAI Endpoint',
-    apiKey: 'Azure OpenAI Key',
+    apiKey: 'Your API Key', // Only API key is needed from user
   });
 
+  // Hard-coded API endpoint
+  const apiUrl = 'https://scholarchain.openai.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2024-02-15-preview';
 
   const addMessage = (text, role) => {
     const newMessage = { text, role };
@@ -43,7 +44,7 @@ const ChatApp = () => {
     setInputText('');
 
     try {
-      const response = await fetch(settingsData.apiUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: JSON.stringify(requestBody),
         headers: {
@@ -81,27 +82,17 @@ const ChatApp = () => {
 
   const handleSaveSettings = () => {
     // You may want to add validation logic here before saving the settings
-    setSettingsData({ apiUrl: settingsData.apiUrl, apiKey: settingsData.apiKey });
+    setSettingsData({ apiKey: settingsData.apiKey });
     setShowSettings(false);
   };
 
   return (
     <div className="container">
       <h2><FontAwesomeIcon icon={faRobot} /> AI Chatapp</h2>
-      {/* new code */}
-      
 
       {showSettings && (
         <div className="settings-popup">
           <div className="settings-content">
-            <label htmlFor="apiUrl">API URL:</label>
-            <input
-              type="text"
-              id="apiUrl"
-              value={settingsData.apiUrl}
-              onChange={(e) => setSettingsData({ ...settingsData, apiUrl: e.target.value })}
-            />
-
             <label htmlFor="apiKey">API Key:</label>
             <input
               type="text"
@@ -115,8 +106,6 @@ const ChatApp = () => {
           </div>
         </div>
       )}
-      {/* end new code */}
-
 
       <div className="chat-app">
         <div className="chat-window">
