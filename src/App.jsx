@@ -2,6 +2,8 @@ import { useState } from 'react';
 import './ChatApp.css'; // Create a CSS file for styling
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog, faTrashCan, faPaperPlane, faRobot } from '@fortawesome/free-solid-svg-icons';
+import { AzureOpenAI } from "openai";
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 
 const ChatApp = () => {
   const [messages, setMessages] = useState([]);
@@ -10,8 +12,9 @@ const ChatApp = () => {
   const [settingsData, setSettingsData] = useState({
     apiUrl: 'Azure OpenAI Endpoint',
     apiKey: 'Azure OpenAI Key',
+    deployment: 'gpt-35-turbo',
+    apiVersion: '2024-04-01-preview',
   });
-
 
   const addMessage = (text, role) => {
     const newMessage = { text, role };
@@ -25,41 +28,29 @@ const ChatApp = () => {
   const handleSendMessage = async () => {
     if (inputText.trim() === '') return;
 
-    // Prepare the request payload based on the curl command
-    const requestBody = {
-      messages: [
-        { role: 'system', content: 'You are an AI assistant that helps people find information.' },
-        { role: 'user', content: inputText },
-      ],
-      max_tokens: 800,
-      temperature: 0.7,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-      top_p: 0.95,
-      stop: null,
-    };
-
     addMessage(inputText, 'user');
     setInputText('');
 
     try {
-      const response = await fetch(settingsData.apiUrl, {
-        method: 'POST',
-        body: JSON.stringify(requestBody),
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': settingsData.apiKey,
-        },
+      // Azure OpenAI SDK Setup
+      const scope = "https://cognitiveservices.azure.com/.default";
+      const azureADTokenProvider = getBearerTokenProvider(new DefaultAzureCredential(), scope);
+      const client = new AzureOpenAI({
+        azureADTokenProvider,
+        deployment: settingsData.deployment,
+        apiVersion: settingsData.apiVersion,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch response from the AI assistant');
-      }
+      // Prepare the request payload
+      const result = await client.chat.completions.create({
+        messages: [
+          { role: 'system', content: 'You are an AI assistant that helps people find information.' },
+          { role: 'user', content: inputText },
+        ],
+        model: '', // Model name is not required for Azure OpenAI SDK
+      });
 
-      const responseData = await response.json();
-      console.log('Response data:', responseData);
-      const assistantReply = responseData.choices[0]?.message.content; // Extract the assistant's reply from the response
-
+      const assistantReply = result.choices[0]?.message.content;
       addMessage(assistantReply, 'assistant');
     } catch (error) {
       console.error('Error fetching data from the API:', error.message);
@@ -80,16 +71,13 @@ const ChatApp = () => {
   };
 
   const handleSaveSettings = () => {
-    // You may want to add validation logic here before saving the settings
-    setSettingsData({ apiUrl: settingsData.apiUrl, apiKey: settingsData.apiKey });
+    setSettingsData({ ...settingsData });
     setShowSettings(false);
   };
 
   return (
     <div className="container">
       <h2><FontAwesomeIcon icon={faRobot} /> AI Chatapp</h2>
-      {/* new code */}
-      
 
       {showSettings && (
         <div className="settings-popup">
@@ -115,8 +103,6 @@ const ChatApp = () => {
           </div>
         </div>
       )}
-      {/* end new code */}
-
 
       <div className="chat-app">
         <div className="chat-window">
